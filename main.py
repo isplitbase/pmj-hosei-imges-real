@@ -24,8 +24,9 @@
 
   環境変数 (Cloud Run に設定):
     OPENAI_API_KEY   … 必須
-    HOSEI_MODEL      … 任意。既定 gpt-image-1
+    HOSEI_MODEL      … 任意。既定 gpt-image-1.5
     HOSEI_SIZE       … 任意。既定 auto
+    HOSEI_INPUT_FIDELITY … 任意。既定 high。gpt-image-1 のときだけ効く
     HOSEI_TIMEOUT    … 任意。既定 600(秒)
     HOSEI_MAX_MB     … 任意。入力画像の上限MB。既定 20
 """
@@ -40,10 +41,12 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
-DEFAULT_MODEL = os.environ.get("HOSEI_MODEL", "gpt-image-1")
+DEFAULT_MODEL = os.environ.get("HOSEI_MODEL", "gpt-image-1.5")
 DEFAULT_SIZE = os.environ.get("HOSEI_SIZE", "auto")
 TIMEOUT = float(os.environ.get("HOSEI_TIMEOUT", "600"))
 MAX_BYTES = int(float(os.environ.get("HOSEI_MAX_MB", "20")) * 1024 * 1024)
+# 入力画像をどれだけ忠実に残すか。gpt-image-1 のみ指定可(1.5 は常に高精度が既定)。
+INPUT_FIDELITY = os.environ.get("HOSEI_INPUT_FIDELITY", "high")
 
 # 既定の補正プロンプト。画面側から prompt を渡せば差し替えられる。
 DEFAULT_PROMPT = (
@@ -141,12 +144,11 @@ def hosei():
     t0 = time.time()
     try:
         client = _client()
-        res = client.images.edit(
-            model=model,
-            image=fileobj,
-            prompt=prompt,
-            size=size,
-        )
+        kwargs = {"model": model, "image": fileobj, "prompt": prompt, "size": size}
+        # input_fidelity は gpt-image-1 専用。1.5 以降は指定するとエラーになる
+        if model == "gpt-image-1" and INPUT_FIDELITY in ("high", "low"):
+            kwargs["input_fidelity"] = INPUT_FIDELITY
+        res = client.images.edit(**kwargs)
     except Exception as e:
         return jsonify({"status": "NG", "error": str(e)[:500],
                         "model": model, "size": size}), 502

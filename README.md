@@ -33,7 +33,7 @@ zaiTask 側は全サーバ同じソースにしてあり、door の URL だけ
   "image_base64": "…",
   "prompt": "…",
   "size": "auto",
-  "model": "gpt-image-1"
+  "model": "gpt-image-1.5"
 }
 ```
 
@@ -43,7 +43,7 @@ zaiTask 側は全サーバ同じソースにしてあり、door の URL だけ
 
 ```json
 { "status":"OK", "image_base64":"…", "mime":"image/png",
-  "model":"gpt-image-1", "size":"auto",
+  "model":"gpt-image-1.5", "size":"auto",
   "in_bytes":312456, "out_bytes":845120, "elapsed":23.4 }
 ```
 
@@ -60,7 +60,8 @@ zaiTask 側は全サーバ同じソースにしてあり、door の URL だけ
 | 変数 | 必須 | 説明 |
 |---|---|---|
 | `OPENAI_API_KEY` | ○ | OpenAI の APIキー |
-| `HOSEI_MODEL`    | 任意 | 既定 `gpt-image-1` |
+| `HOSEI_MODEL`    | 任意 | 既定 `gpt-image-1.5` |
+| `HOSEI_INPUT_FIDELITY` | 任意 | 既定 `high`。`gpt-image-1` のときだけ効く(1.5 は指定不可) |
 | `HOSEI_SIZE`     | 任意 | 既定 `auto`。`1024x1024` / `1024x1536` / `1536x1024` |
 | `HOSEI_TIMEOUT`  | 任意 | OpenAI への待ち時間(秒)。既定 600 |
 | `HOSEI_MAX_MB`   | 任意 | 入力画像の上限MB。既定 20 |
@@ -102,7 +103,7 @@ POST /call
 
 ## ★ 注意: 画像生成AIによる補正のリスク
 
-このサービスは画像生成モデル(`gpt-image-1`)で画像を**作り直して**いる。
+このサービスは画像生成モデル(既定 `gpt-image-1.5`)で画像を**作り直して**いる。
 元画像にフィルタをかけているのではなく、**新しい画像を描き起こしている**。
 
 そのため、次の点に注意すること。
