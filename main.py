@@ -49,10 +49,24 @@ MAX_BYTES = int(float(os.environ.get("HOSEI_MAX_MB", "20")) * 1024 * 1024)
 INPUT_FIDELITY = os.environ.get("HOSEI_INPUT_FIDELITY", "high")
 
 # 既定の補正プロンプト。画面側から prompt を渡せば差し替えられる。
+#   生成モデルは放っておくと表を「描き直して」しまい、金額や科目名が変わる。
+#   そのため「書き直すな」を主にして、直してよい範囲を限定している。
 DEFAULT_PROMPT = (
-    "この画像の余計な線を消してください\n"
-    "この画像を斜めにしないでください\n"
-    "この画像を文字を読みやすくしてください"
+    "これは決算書を撮影した画像です。内容は一切書き直さず、写真としての見え方だけを整えてください。\n"
+    "\n"
+    "絶対に守ること:\n"
+    "- 文字・数字・記号・罫線を変更しない。1文字も書き換えない、足さない、消さない\n"
+    "- 行や項目の順序・位置を変えない。表を作り直さない、清書しない\n"
+    "- 読み取れない部分は読み取れないまま残す。推測して補わない\n"
+    "- 書体やレイアウトを整えない\n"
+    "\n"
+    "行ってよいこと:\n"
+    "- 紙の傾き・台形のゆがみを直す\n"
+    "- 紙の外側(机・影・写り込み)を白にする\n"
+    "- 明るさとコントラストを整えて読みやすくする\n"
+    "\n"
+    "Do not redraw, retype, or regenerate any text or numbers. "
+    "Preserve every character exactly as in the input."
 )
 
 ALLOWED_SIZES = ("auto", "1024x1024", "1024x1536", "1536x1024")
@@ -148,6 +162,7 @@ def hosei():
         # input_fidelity は gpt-image-1 専用。1.5 以降は指定するとエラーになる
         if model == "gpt-image-1" and INPUT_FIDELITY in ("high", "low"):
             kwargs["input_fidelity"] = INPUT_FIDELITY
+        used_fidelity = kwargs.get("input_fidelity")
         res = client.images.edit(**kwargs)
     except Exception as e:
         return jsonify({"status": "NG", "error": str(e)[:500],
@@ -175,6 +190,7 @@ def hosei():
         "mime": "image/png",          # gpt-image-1 の出力は PNG
         "model": model,
         "size": size,
+        "input_fidelity": used_fidelity,
         "in_bytes": len(raw),
         "out_bytes": len(out_b64) * 3 // 4,
         "elapsed": elapsed,
