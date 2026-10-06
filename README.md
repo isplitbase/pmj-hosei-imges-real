@@ -5,11 +5,18 @@
 サーバ(149 / test1)の負荷を上げないよう、画像処理はすべてこちらで行う。
 
 ```
-zaiTask(.do) → pmj-door(-real) → [pmj-hosei-imges] → OpenAI
+検証(test1)   : zaiTask(.do) → pmj-door      → pmj-hosei-imges      → OpenAI
+本番(148,149) : zaiTask(.do) → pmj-door-real → pmj-hosei-imges-real → OpenAI
 ```
 
-- `pmj-hosei-imges`      … 検証用
-- `pmj-hosei-imges-real` … 本番用
+| サーバ | 使う door | 使う補正API |
+|---|---|---|
+| test1 (54.64.240.94) | `pmj-door` | `pmj-hosei-imges` |
+| イントラ 148 / 149 | `pmj-door-real` | `pmj-hosei-imges-real` |
+
+zaiTask 側は全サーバ同じソースにしてあり、door の URL だけ
+`/data/hosei_door.conf`(1行、door の URL)で切り替える。
+このファイルが無い場合は本番(`pmj-door-real`)として動く。
 
 ## エンドポイント
 
@@ -67,10 +74,12 @@ GitHub への push で自動デプロイされる(リポジトリからの継続
 ## pmj-door 側の設定
 
 door は `target` 名で転送先を選ぶため、door のサービスに次を追加する。
+検証・本番それぞれの door に、対応する補正APIの URL を入れる。
 
-| 変数 | 値 |
-|---|---|
-| `TARGET_HOSEIIMGES` | このサービスの URL |
+| door | 変数 | 値 |
+|---|---|---|
+| `pmj-door`      | `TARGET_HOSEIIMGES` | `pmj-hosei-imges` のURL |
+| `pmj-door-real` | `TARGET_HOSEIIMGES` | `pmj-hosei-imges-real` のURL |
 
 あわせて、door のサービスアカウントにこのサービスへの `roles/run.invoker` を付与する。
 
@@ -81,6 +90,15 @@ POST /call
 { "target": "hoseiimges", "path": "/hosei",
   "payload": { "image_base64": "…" } }
 ```
+
+## zaiTask 側(test1 / 148 / 149)
+
+| ファイル | 役割 |
+|---|---|
+| `ikisaki_tool/ikisaki_itask_tool/itask_image_hosei.do` | 画面から画像を受け取り door へ中継。元画像は書き換えない |
+| `ikisaki_tool/ikisaki_itask_tool.do`                   | `action=itask_image_hosei` の分岐 |
+| `ikisaki_tool/js/pmjtools2.js`                         | 「openai画像処理」ボタンの処理 |
+| `/data/hosei_door.conf`                                | 使う door の URL(1行)。無ければ `pmj-door-real` |
 
 ## ★ 注意: 画像生成AIによる補正のリスク
 
